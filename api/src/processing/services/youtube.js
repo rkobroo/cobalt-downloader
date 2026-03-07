@@ -1,8 +1,26 @@
+import { env } from "../../config.js";
 import { YtDlp } from "ytdlp-nodejs";
 import { getCookie } from "../cookie/manager.js";
 import { getYouTubeSession } from "../helpers/youtube-session.js";
 
 const ytdlp = new YtDlp();
+const YOUTUBE_EXTRACTOR_ARGS = {
+    youtube: ["player_client=android"],
+};
+
+const updateYtdlpPromise = ytdlp
+    .updateYtDlpAsync()
+    .then((result) => {
+        if (result?.version) {
+            console.info("[youtube] yt-dlp updated", {
+                version: result.version,
+                method: result.method,
+            });
+        }
+    })
+    .catch((error) => {
+        console.warn("[youtube] yt-dlp update failed", error?.message);
+    });
 
 const logFetchFailure = (id, error) => {
     console.error("yt-dlp failed", {
@@ -173,6 +191,8 @@ function extractJson(stdout) {
 }
 
 async function fetchVideoInfo(videoUrl, sourceAddress) {
+    await updateYtdlpPromise;
+
     const options = {
         dumpSingleJson: true,
         skipDownload: true,
@@ -180,6 +200,18 @@ async function fetchVideoInfo(videoUrl, sourceAddress) {
         noWarnings: true,
         noColor: true,
         noProgress: true,
+    };
+
+    if (env.ytdlpCookieFile) {
+        options.rawArgs = [
+            ...(options.rawArgs ?? []),
+            "--cookies",
+            env.ytdlpCookieFile,
+        ];
+    }
+
+    options.extractorArgs = {
+        ...YOUTUBE_EXTRACTOR_ARGS,
     };
 
     if (sourceAddress) {
