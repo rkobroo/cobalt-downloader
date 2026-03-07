@@ -1,6 +1,15 @@
 import { YtDlp } from "ytdlp-nodejs";
 
 const ytdlp = new YtDlp();
+
+const logFetchFailure = (id, error) => {
+    console.error("yt-dlp failed", {
+        id,
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack?.split("\n")?.[0],
+    });
+};
 const AUDIO_EXTENSIONS = new Set([
     "aac",
     "flac",
@@ -191,7 +200,8 @@ export default async function (o) {
 
     try {
         rawInfo = await fetchVideoInfo(videoUrl, o.requestIP);
-    } catch {
+    } catch (error) {
+        logFetchFailure(o.id, error);
         return { error: "fetch.fail" };
     }
 

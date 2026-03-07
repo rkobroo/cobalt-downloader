@@ -40,6 +40,17 @@ const corsConfig = env.corsWildcard ? {} : {
 }
 
 const fail = (res, code, context) => {
+    const req = res?.req;
+    const requestUrl = req?.body?.url;
+    const requestMode = req?.body?.downloadMode;
+    console.warn("[api] request failed", {
+        code,
+        context,
+        url: requestUrl,
+        downloadMode: requestMode,
+        ip: req?.ip,
+    });
+
     const { status, body } = createResponse("error", { code, context });
     res.status(status).json(body);
 }
@@ -235,6 +246,15 @@ export const runAPI = async (express, app, __dirname, isPrimary = true) => {
 
     app.post('/', async (req, res) => {
         const request = req.body;
+        let parsed;
+
+        console.info("[api] request received", {
+            url: request?.url,
+            downloadMode: request?.downloadMode,
+            localProcessing: request?.localProcessing,
+            authType: req.authType,
+            ip: req.ip,
+        });
 
         if (!request.url) {
             return fail(res, "error.api.link.missing");
@@ -245,10 +265,15 @@ export const runAPI = async (express, app, __dirname, isPrimary = true) => {
             return fail(res, "error.api.invalid_body");
         }
 
-        const parsed = extract(
+        parsed = extract(
             normalizedRequest.url,
             APIKeys.getAllowedServices(req.rateLimitKey),
         );
+
+        console.info("[api] parsed request", {
+            host: parsed?.host,
+            service: parsed?.host ? friendlyServiceName(parsed.host) : undefined,
+        });
 
         if (!parsed) {
             return fail(res, "error.api.link.invalid");
@@ -270,8 +295,17 @@ export const runAPI = async (express, app, __dirname, isPrimary = true) => {
                 authType: req.authType ?? "none",
             });
 
+            console.info("[api] match result", {
+                host: parsed.host,
+                statusCode: result.status,
+                responseType: result.body?.status,
+                responseService: result.body?.service,
+                localProcessing: normalizedRequest?.localProcessing,
+            });
+
             res.status(result.status).json(result.body);
         } catch {
+            console.error("[api] match execution error", { host: parsed?.host });
             fail(res, "error.api.generic");
         }
     });
