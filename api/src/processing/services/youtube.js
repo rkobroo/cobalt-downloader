@@ -1,4 +1,6 @@
 import { YtDlp } from "ytdlp-nodejs";
+import { getCookie } from "../cookie/manager.js";
+import { getYouTubeSession } from "../helpers/youtube-session.js";
 
 const ytdlp = new YtDlp();
 
@@ -21,6 +23,40 @@ const AUDIO_EXTENSIONS = new Set([
     "alac",
 ]);
 const HTTP_PREFIX = "http";
+
+function createSessionHeaders(session) {
+    if (!session) {
+        return;
+    }
+
+    const headers = {};
+    if (session.visitor_data) {
+        headers["X-Goog-Visitor-Id"] = session.visitor_data;
+    }
+
+    if (session.potoken) {
+        headers["X-Youtube-Identity-Token"] = session.potoken;
+    }
+
+    return Object.keys(headers).length ? headers : undefined;
+}
+
+function createCookieHeader(session) {
+    const cookieParts = [];
+    const youtubeCookie = getCookie("youtube");
+    const existingNames = new Set();
+
+    if (youtubeCookie) {
+        cookieParts.push(youtubeCookie.toString());
+        Object.keys(youtubeCookie.values()).forEach((name) => existingNames.add(name));
+    }
+
+    if (session?.visitor_data && !existingNames.has("VISITOR_INFO1_LIVE")) {
+        cookieParts.push(`VISITOR_INFO1_LIVE=${session.visitor_data}`);
+    }
+
+    return cookieParts.length ? cookieParts.join("; ") : undefined;
+}
 
 function toNumber(value) {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -148,6 +184,18 @@ async function fetchVideoInfo(videoUrl, sourceAddress) {
 
     if (sourceAddress) {
         options.sourceAddress = sourceAddress;
+    }
+
+    const session = getYouTubeSession();
+    const sessionHeaders = createSessionHeaders(session);
+    const cookieHeader = createCookieHeader(session);
+
+    if (sessionHeaders) {
+        options.addHeaders = sessionHeaders;
+    }
+
+    if (cookieHeader) {
+        options.cookies = cookieHeader;
     }
 
     const result = await ytdlp.execAsync(videoUrl, options);
