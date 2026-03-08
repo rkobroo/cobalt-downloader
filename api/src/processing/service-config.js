@@ -152,7 +152,7 @@ export const services = {
             ":user/photo/:postId",
             "v/:postId.html"
         ],
-        subdomains: ["vt", "vm", "m", "t", "pro"],
+        subdomains: ["vt", "vm", "m", "t"],
     },
     tumblr: {
         patterns: [
@@ -218,7 +218,8 @@ export const services = {
             "watch?v=:id",
             "embed/:id",
             "watch/:id",
-            "v/:id"
+            "v/:id",
+            "post/:postId",
         ],
         subdomains: ["music", "m"],
     }

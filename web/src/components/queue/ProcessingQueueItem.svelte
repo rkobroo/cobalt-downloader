@@ -46,8 +46,20 @@
     const retry = async (info: CobaltQueueItem) => {
         if (info.canRetry && info.originalRequest) {
             retrying = true;
+            const request = { ...info.originalRequest };
+
+            // If local processing failed due to an empty tunnel,
+            // fall back to server-side processing on retry.
+            if (
+                info.errorCode === "queue.fetch.empty_tunnel"
+                && request.localProcessing === "preferred"
+            ) {
+                request.localProcessing = "disabled";
+                request.alwaysProxy = true;
+            }
+
             await savingHandler({
-                request: info.originalRequest,
+                request,
                 oldTaskId: id,
             });
             retrying = false;

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync }  from 'node:fs';
+import { existsSync }  from 'node:fs';
 import { join, parse } from 'node:path';
 import { cwd }         from 'node:process';
 import { readFile }    from 'node:fs/promises';
@@ -17,35 +17,17 @@ const findFile = (file) => {
 
 const root = findFile('.git');
 const pack = findFile('package.json');
-const packageMeta = pack ? JSON.parse(readFileSync(join(pack, 'package.json'), 'utf8')) : {};
-
-const safeReadGit = async (filename) => {
-    if (!root) {
-        return;
-    }
-
-    try {
-        return await readFile(join(root, filename), 'utf8');
-    } catch {
-        return;
-    }
-};
 
 const readGit = (filename) => {
     if (!root) {
-        return;
+        throw 'no git repository root found';
     }
 
     return readFile(join(root, filename), 'utf8');
 }
 
 export const getCommit = async () => {
-    if (process.env.CI_COMMIT_SHA) {
-        return process.env.CI_COMMIT_SHA;
-    }
-
-    const logs = await safeReadGit('.git/logs/HEAD');
-    return logs
+    return (await readGit('.git/logs/HEAD'))
             ?.split('\n')
             ?.filter(String)
             ?.pop()
@@ -60,19 +42,17 @@ export const getBranch = async () => {
     if (process.env.WORKERS_CI_BRANCH) {
         return process.env.WORKERS_CI_BRANCH;
     }
-    const head = await safeReadGit('.git/HEAD');
-    return head
+
+    return (await readGit('.git/HEAD'))
             ?.replace(/^ref: refs\/heads\//, '')
             ?.trim();
 }
 
 export const getRemote = async () => {
-    let remote = (await safeReadGit('.git/config'))
+    let remote = (await readGit('.git/config'))
                     ?.split('\n')
                     ?.find(line => line.includes('url = '))
-                    ?.split('url = ')[1]
-                ?? packageMeta?.repository?.url
-                ?? process.env.CI_REPOSITORY_URL;
+                    ?.split('url = ')[1];
 
     if (remote?.startsWith('git@')) {
         remote = remote.split(':')[1];

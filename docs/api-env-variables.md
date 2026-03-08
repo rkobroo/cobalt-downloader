@@ -8,7 +8,6 @@ this document is not final and will expand over time. feel free to improve it!
 | API_URL                |         | `https://api.url.example/`            |
 | API_PORT               | `9000`  | `1337`                                |
 | COOKIE_PATH            |         | `/cookies.json`                       |
-| YTDLP_COOKIES_FILE     |         | `./cookies.txt`                       |
 | PROCESSING_PRIORITY    |         | `10`                                  |
 | API_INSTANCE_COUNT     |         | `6`                                   |
 | API_REDIS_URL          |         | `redis://localhost:6379`              |
@@ -90,11 +89,6 @@ the value is a number from 1024 to 65535.
 
 ### COOKIE_PATH
 path to the `cookies.json` file relative to the current working directory of your cobalt instance (usually the main (src/api) folder).
-
-### YTDLP_COOKIES_FILE
-path to a `yt-dlp` cookies file (often exported from a browser extension or `yt-dlp --cookies`) that should be reused for every YouTube request. this allows yt-dlp to present a logged-in session and bypass additional challenges.
-
-the value is a path to the cookie file relative to your cobalt working directory (absolute paths work as well).
 
 ### PROCESSING_PRIORITY
 `nice` value for ffmpeg subprocesses. available only on unix systems.

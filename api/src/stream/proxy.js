@@ -36,8 +36,35 @@ export default async function (streamInfo, res) {
             }
         }
 
+        let receivedBytes = 0;
+        stream.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+        });
+        stream.on('end', () => {
+            if (receivedBytes === 0) {
+                console.error('Empty proxy stream', {
+                    service: streamInfo.service,
+                    url: streamInfo.urls,
+                    statusCode,
+                    contentType: headers['content-type'],
+                    contentLength: headers['content-length'],
+                });
+            }
+        });
+        stream.on('error', (err) => {
+            console.error('Proxy stream error', {
+                service: streamInfo.service,
+                url: streamInfo.urls,
+                error: String(err),
+            });
+        });
+
         pipe(stream, res, shutdown);
     } catch {
+        console.error('Proxy request failed', {
+            service: streamInfo.service,
+            url: streamInfo.urls,
+        });
         shutdown();
     }
 }

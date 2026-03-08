@@ -86,5 +86,6 @@ export const testers = {
         pattern.shareId?.length <= 24 && pattern.shareType?.length === 1,
 
     "youtube": pattern =>
-        pattern.id?.length <= 11,
+        pattern.id?.length <= 11
+        || pattern.postId?.length <= 40,
 }

@@ -18,6 +18,7 @@ export default function({
     filenameStyle,
     convertGif,
     requestIP,
+    proxyToUse,
     audioBitrate,
     alwaysProxy,
     localProcessing,
@@ -32,6 +33,7 @@ export default function({
                     createFilename(r.filenameAttributes, filenameStyle, isAudioOnly, isAudioMuted) : r.filename,
             fileMetadata: !disableMetadata ? r.fileMetadata : false,
             requestIP,
+            proxyToUse,
             originalRequest: r.originalRequest,
             subtitles: r.subtitles,
             cover: !disableMetadata ? r.cover : false,
@@ -104,6 +106,7 @@ export default function({
                 case "snapchat":
                 case "bsky":
                 case "xiaohongshu":
+                case "youtube":
                     params = { picker: r.picker };
                     break;
 
@@ -181,6 +184,7 @@ export default function({
                 case "ok":
                 case "xiaohongshu":
                 case "newgrounds":
+                case "bsky":
                     params = { type: "proxy" };
                     break;
 

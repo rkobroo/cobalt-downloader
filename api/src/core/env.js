@@ -1,3 +1,4 @@
+import ipaddr from "ipaddr.js";
 import { Constants } from "youtubei.js";
 import { services } from "../processing/service-config.js";
 import { updateEnv, canonicalEnv, env as currentEnv } from "../config.js";
@@ -67,11 +68,13 @@ export const loadEnvs = (env = process.env) => {
         listenAddress: env.API_LISTEN_ADDRESS,
         freebindCIDR: process.platform === 'linux' && env.FREEBIND_CIDR,
 
+        sourceIps: env.MEOWING_SOURCE_IPS?.split(","),
+        proxies: env.MEOWING_PROXIES?.split(","),
+
         corsWildcard: env.CORS_WILDCARD !== '0',
         corsURL: env.CORS_URL,
 
         cookiePath: env.COOKIE_PATH,
-        ytdlpCookieFile: env.YTDLP_COOKIES_FILE,
 
         rateLimitWindow: (env.RATELIMIT_WINDOW && parseInt(env.RATELIMIT_WINDOW)) || 60,
         rateLimitMax: (env.RATELIMIT_MAX && parseInt(env.RATELIMIT_MAX)) || 20,
@@ -106,7 +109,11 @@ export const loadEnvs = (env = process.env) => {
 
         sessionEnabled: env.TURNSTILE_SITEKEY
                             && env.TURNSTILE_SECRET
-                            && env.JWT_SECRET,
+                            && env.JWT_SECRET
+                            && !env.MEOWING_SESSION_REQUIRED_FOR,
+
+        sessionRequiredCIDRs: env.MEOWING_SESSION_REQUIRED_FOR?.split(",")
+            .map(cidr => ipaddr.parseCIDR(cidr)),
 
         apiKeyURL: env.API_KEY_URL && new URL(env.API_KEY_URL),
         authRequired: env.API_AUTH_REQUIRED === '1',
@@ -117,11 +124,15 @@ export const loadEnvs = (env = process.env) => {
         allServices,
         enabledServices,
 
+        useSystemFFmpeg: env.USE_SYSTEM_FFMPEG === "1",
+
         customInnertubeClient: env.CUSTOM_INNERTUBE_CLIENT,
         ytSessionServer: env.YOUTUBE_SESSION_SERVER,
         ytSessionReloadInterval: 300,
         ytSessionInnertubeClient: env.YOUTUBE_SESSION_INNERTUBE_CLIENT,
         ytAllowBetterAudio: env.YOUTUBE_ALLOW_BETTER_AUDIO !== "0",
+        ytPlayerId: env.YOUTUBE_PLAYER_ID,
+        ytGeneratePoTokens: env.YOUTUBE_GENERATE_PO_TOKENS !== "0",
 
         // "never" | "session" | "always"
         forceLocalProcessing: env.FORCE_LOCAL_PROCESSING ?? "never",
@@ -139,7 +150,7 @@ export const loadEnvs = (env = process.env) => {
 let loggedProxyWarning = false;
 
 export const validateEnvs = async (env) => {
-    if (env.sessionEnabled && env.jwtSecret.length < 16) {
+    if ((env.sessionEnabled || env.MEOWING_SESSION_REQUIRED_FOR) && env.jwtSecret.length < 16) {
         throw new Error("JWT_SECRET env is too short (must be at least 16 characters long)");
     }
 

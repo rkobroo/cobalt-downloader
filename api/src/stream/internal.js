@@ -56,6 +56,7 @@ async function handleChunkedStream(streamInfo, res) {
 
     try {
         let req, attempts = 3;
+        let size;
         while (attempts--) {
             req = await fetch(streamInfo.url, {
                 headers: getHeaders(streamInfo.service),
@@ -74,10 +75,55 @@ async function handleChunkedStream(streamInfo, res) {
             } else break;
         }
 
-        const size = BigInt(req.headers.get('content-length'));
+        const lengthHeader = req.headers.get('content-length');
+        if (lengthHeader) {
+            size = BigInt(lengthHeader);
+        }
 
-        if (req.status !== 200 || !size) {
-            return cleanup();
+        // Fallback: try to infer total size from Content-Range.
+        if (!size) {
+            const rangeResp = await fetch(streamInfo.url, {
+                headers: {
+                    ...getHeaders(streamInfo.service),
+                    Range: "bytes=0-0",
+                },
+                method: 'GET',
+                dispatcher: streamInfo.dispatcher,
+                signal
+            });
+
+            streamInfo.url = rangeResp.url;
+            const contentRange = rangeResp.headers.get('content-range');
+            if (contentRange) {
+                const total = contentRange.split('/')[1];
+                if (total && total !== '*') {
+                    size = BigInt(total);
+                }
+            }
+
+            // drain the response body (1 byte) to free the socket
+            try { await rangeResp.arrayBuffer(); } catch {}
+        }
+
+        if (req.status !== 200) {
+            globalThis.FORCE_RESET_INNERTUBE_PLAYER = true;
+            if (streamInfo.service === "youtube") {
+                console.error("Chunked HEAD failed; falling back to generic stream", {
+                    url: streamInfo.url,
+                    status: req.status,
+                });
+            }
+            return handleGenericStream(streamInfo, res);
+        }
+
+        // If we still don't have a size, try a generic stream fallback.
+        if (!size) {
+            if (streamInfo.service === "youtube") {
+                console.error("Chunked stream size unavailable; falling back to generic stream", {
+                    url: streamInfo.url,
+                });
+            }
+            return handleGenericStream(streamInfo, res);
         }
 
         const generator = readChunks(streamInfo, size);
@@ -110,6 +156,7 @@ async function handleGenericStream(streamInfo, res) {
         const fileResponse = await request(streamInfo.url, {
             headers: {
                 ...Object.fromEntries(streamInfo.headers),
+                ...getHeaders(streamInfo.service),
                 host: undefined
             },
             dispatcher: streamInfo.dispatcher,
@@ -133,6 +180,7 @@ async function handleGenericStream(streamInfo, res) {
         }
 
         if (isHls) {
+            res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
             await handleHlsPlaylist(streamInfo, fileResponse, res);
         } else {
             pipe(fileResponse.body, res, cleanup);
