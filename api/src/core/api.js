@@ -387,7 +387,7 @@ export const runAPI = async (express, app, __dirname, isPrimary = true) => {
             Cookies.setup(env.cookiePath);
         }
 
-        if (env.ytSessionServer) {
+        if (env.ytSessionServer || env.ytGeneratePoTokens) {
             YouTubeSession.setup();
         }
     });

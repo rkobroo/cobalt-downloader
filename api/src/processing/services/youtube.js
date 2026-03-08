@@ -106,7 +106,9 @@ const cloneInnertube = async (customFetch, useSession, requestIP) => {
     const sessionTokens = getYouTubeSession();
     const retrieve_player = true;
 
-    if (useSession && env.ytSessionServer && !sessionTokens?.potoken) {
+    const hasSessionSource = env.ytSessionServer || env.ytGeneratePoTokens;
+
+    if (useSession && hasSessionSource && !sessionTokens?.potoken) {
         throw "no_session_tokens";
     }
 
@@ -312,8 +314,10 @@ export default async function (o) {
 
     // iOS client doesn't have adaptive formats of resolution >1080p,
     // so we use the WEB_EMBEDDED client instead for those cases
+    const hasSessionSource = env.ytSessionServer || env.ytGeneratePoTokens;
+
     let useSession =
-        env.ytSessionServer && (
+        hasSessionSource && (
             (
                 !useHLS
                 && innertubeClient === "IOS"

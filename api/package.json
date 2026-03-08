@@ -10,7 +10,6 @@
   },
   "scripts": {
     "start": "node src/cobalt",
-    "start:session": "node src/util/youtube-session-server",
     "test": "node src/util/test",
     "token:jwt": "node src/util/generate-jwt-secret"
   },
